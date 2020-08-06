@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+
 """
 Script to train a single model without cross validation
 """
@@ -39,7 +39,6 @@ from keras.callbacks import ReduceLROnPlateau
 from sklearn.utils import class_weight
 from sklearn.metrics import accuracy_score
 
-
 ##############################
 
 # Image specifications/interpolation
@@ -52,8 +51,8 @@ img_channels = 3
 
 total_classes = 3
 class_names = ['recurrence',
- 'nondiagnostic',
- 'pseudoprogression']
+        'nondiagnostic',
+        'pseudoprogression']
 
 def nio_preprocessing_function(image):
     """
@@ -90,7 +89,7 @@ def recurrence_model(pretrained_model_path, trainable_feature_extractor = True):
     # Instantiate the previously trained feature extractor
     model = load_model(pretrained_model_path)
     model_feature_extractor = Model(input=model.inputs, outputs=model.layers[-7].output) # indexing into the global average pooling layer, -7, -3
-    
+
     if trainable_feature_extractor:
         model_feature_extractor.trainable = True
     elif not trainable_feature_extractor:
@@ -116,51 +115,43 @@ def recurrence_model(pretrained_model_path, trainable_feature_extractor = True):
 def save_model(model, name):
     model.save(name + ".hdf5")
 
-cnn_predictions = model.predict_generator(validation_generator, steps=val_steps, verbose=1) 
-# CNN prediction 1d vector. This is the inverse of one-hot encoding
-cnn_predict_1d = np.argmax(cnn_predictions, axis = 1)
-# Ground truth generated from the validation generator
-index_validation = validation_generator.classes
-# Overall accuracy
-accuracy_score(index_validation, cnn_predict_1d)
-
-
-
 if __name__ == "__main__":
-    
+
+    # Instantiate the datagenerators
     train_generator = ImageDataGenerator(
-    horizontal_flip=True,
-    vertical_flip=True,
-    preprocessing_function = nio_preprocessing_function,
-    data_format = "channels_last").flow_from_directory(directory = training_dir,
-    target_size = (img_rows, img_cols), color_mode = 'rgb', classes = None, class_mode = 'categorical',
-    batch_size = 32, shuffle = True)
+            horizontal_flip=True,
+            vertical_flip=True,
+            preprocessing_function = nio_preprocessing_function,
+            data_format = "channels_last").flow_from_directory(directory = training_dir,
+                    target_size = (img_rows, img_cols), color_mode = 'rgb', classes = None, class_mode = 'categorical',
+                    batch_size = 32, shuffle = True)
 
+    # Fnd an efficient validation batch size (just for speed) and validation generator
     val_batch, val_steps = validation_batch_steps(validation_dir)
-
     validation_generator = ImageDataGenerator(
-        horizontal_flip=False,
-        vertical_flip=False,
-        preprocessing_function = nio_preprocessing_function,
-        data_format = "channels_last").flow_from_directory(directory = validation_dir,
-        target_size = (img_rows, img_cols), color_mode = 'rgb', classes = None, class_mode = 'categorical',
-        batch_size = val_batch, shuffle = False)
-
+            horizontal_flip=False,
+            vertical_flip=False,
+            preprocessing_function = nio_preprocessing_function,
+            data_format = "channels_last").flow_from_director(directory = validation_dir,
+                    target_size = (img_rows, img_cols), color_mode = 'rgb', classes = None, class_mode = 'categorical',
+                    batch_size = val_batch, shuffle = False)
 
     # Callbacks/Early Stopping/ Model Monitoring
     early_stop = EarlyStopping(monitor='val_acc', min_delta = 0.05, patience=10, mode = 'auto')
-    checkpoint = ModelCheckpoint('NoWeights_Resnet_weights.{epoch:02d}-{val_acc:.2f}.hdf5', monitor='val_acc', verbose=0, save_best_only=True, save_weights_only=True, mode='auto', period=1)
+    checkpoint = ModelCheckpoint('model_weights.{epoch:02d}-{val_acc:.2f}.hdf5', 
+            monitor='val_acc', verbose=0, save_best_only=True, save_weights_only=True, mode='auto', period=1)
     reduce_LR = ReduceLROnPlateau(monitor='acc', factor=0.5, patience=10, verbose=1, mode='auto', cooldown=0, min_lr=0)
-    callbacks_list = [checkpoint]
+    callbacks_list = [checkpoint, reduce_LR]
 
     # Class weights if needed
     class_weight = class_weight.compute_class_weight('balanced', np.unique(train_generator.classes), train_generator.classes)
     weight_dict = dict(zip(list(range(0,total_classes)), class_weight))
 
-
-    os.chdir('/home/todd/Desktop')
+    # Train the model
+    os.chdir("")
     parallel_model.fit_generator(train_generator, steps_per_epoch = 10000, epochs=10, shuffle=True, class_weight = weight_dict,
-                                max_queue_size=30, workers=1, initial_epoch=0, verbose = 1, validation_data=validation_generator, validation_steps=val_steps, callbacks=callbacks_list)
+            max_queue_size=30, workers=1, initial_epoch=0, verbose = 1,
+            validation_data=validation_generator, validation_steps=val_steps, callbacks=callbacks_list)
 
-
-    save_model(model, "NASNet_train_7_acc91_valacc84")
+    # Save model
+    save_model(model, "trained_model")

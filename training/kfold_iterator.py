@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 
 """
-Script to perform cross validation on the 35 patient training set. The major advantage of this script is that it is designed to perform
-patient-level cross validation, not patch or mosaic level cross validaiton.
+Script to perform cross validation on the 35 patient training set. The major
+advantage of this script that it will perform patient-level cross validation,
+not patch or mosaic level cross validaiton.
 """
 
 from pandas import DataFrame, ExcelWriter
 import os
-import numpy as np 
+import numpy as np
+import random
 
 from sklearn.utils import shuffle
 from sklearn.utils import class_weight
 from sklearn.metrics import accuracy_score
 
-import random
 from keras.preprocessing.image import ImageDataGenerator
 from keras.layers import Dense, Activation
 from keras.optimizers import Adam
@@ -25,20 +26,20 @@ from keras import backend as K
 
 class Kfold_split_data(object):
     """
-    Object that holds the cross validation data and results
+    Object that stores the cross validation data and results
     """
     def __init__(self, train_patients, val_patients):
         self.train_patients = train_patients
         self.val_patients = val_patients
         self.labels = None
         self.filenames = None
-        
+
         self.softmax_vector = None
         self.val_predictions = None
-        
+
         self.train_history = None
         self.val_acc = None
-        
+
     def set_labels(self, val_gen):
         self.labels = val_gen.classes
     def set_filenames(self, val_gen):
@@ -78,7 +79,7 @@ def parent_dataframe(directory):
     filelist = []
     patients = []
     labels = []
-     
+
     for root, _, files in os.walk(directory):
         for file in files:
             if "png" in file:
@@ -90,7 +91,7 @@ def parent_dataframe(directory):
                     labels.append("pseudoprogression")
                 if "nondiagnostic" in os.path.join(root, file):
                     labels.append("nondiagnostic")
-    
+
     df = DataFrame({"filename":filelist, "class":labels})
     df = shuffle(df) # shuffle dataframe
 
@@ -103,15 +104,17 @@ def parent_dataframe(directory):
 
 def model_builder(parent_model, trainable_feature_extractor = True):
     """
-    Function that builds the recurrence model from a previously trained SRH feature extractor. 
-    Can specify if the bottom CNN layers are trainable. 
-    if yes > "pretraining"
-    if no > "transfer training"
+    Function that builds the recurrence model from a previously trained SRH feature extractor
+    for transfer learning.
+    Can specify if the bottom CNN layers are trainable.
+    if True > "pretraining"
+    if False > "transfer training"
 
     """
     # define feature extractor model    
     feature_extractor = Model(input=parent_model.inputs, outputs=parent_model.layers[-7].output) # indexing into the global average pooling layer, -7
-    
+
+    # specify if pretraining or transfer training
     if trainable_feature_extractor:
         feature_extractor.trainable = True
     elif not trainable_feature_extractor:
@@ -125,13 +128,14 @@ def model_builder(parent_model, trainable_feature_extractor = True):
 
     return model
 
-def kfold_generator(df, patient_list, kth_fold):
+def kfold_generator(df, patient_list, kth_fold, step = 5):
     """
     Generates folds for cross validation
+    Step 5 is specific to training set of 35 and needs specific for your dataset.
     """
-    val_set = patient_list[kth_fold * 5:kth_fold * 5 + 5] # THIS IS SPECIFIC FOR 35 and would need to change for different number of patients
+    val_set = patient_list[kth_fold * step:kth_fold * step + step]
     train_set = list(set(patient_list).difference(val_set))
-    
+
     # generate training dataframe
     train_df = DataFrame()
     for train_case in train_set:
@@ -152,14 +156,16 @@ def class_weights(train_generator):
     return weight_dict
 
 def export_history(kfold_object, kthfold):
-
+    """Function that will export cross validation results.
+    Will export to current working directory.
+    """
     # Create some Pandas dataframes from some data.
     df1 = DataFrame({'filenames': kfold_object.filenames,
-    'nondiagnostic': kfold_object.softmax_vector[:,0],
-    'pseudoprogression': kfold_object.softmax_vector[:,1],
-    'recurrence': kfold_object.softmax_vector[:,2],
-    'pred': kfold_object.val_predictions,
-    'ground': kfold_object.labels})
+        'nondiagnostic': kfold_object.softmax_vector[:,0],
+        'pseudoprogression': kfold_object.softmax_vector[:,1],
+        'recurrence': kfold_object.softmax_vector[:,2],
+        'pred': kfold_object.val_predictions,
+        'ground': kfold_object.labels})
 
     df2 = DataFrame({'train_patients': kfold_object.train_patients})
     df3 = DataFrame({'val_patinets': kfold_object.val_patients})
@@ -175,10 +181,11 @@ def export_history(kfold_object, kthfold):
     # Close the Pandas Excel writer and output the Excel file.
     writer.save()
 
-def kfold_iterator(parent_df, patient_list, model_path):
+def kfold_iterator(parent_df, patient_list, model_path, kfolds = 7):
+    """Main function. Will run cross validation and store results."""
 
     training_dict = {}
-    for kth_fold in range(7): # this number is specific to the number of cases we have (35 total, 7 folds, 5 each)
+    for kth_fold in range(kfolds): # this number is specific to the number of cases we have (35 total, 7 folds, 5 each)
         print("Executing", str(kth_fold) + "th fold for training.")
 
         # generate training and validation patients
@@ -189,23 +196,23 @@ def kfold_iterator(parent_df, patient_list, model_path):
         kfold_train_object = Kfold_split_data(train_patients, val_patients)
 
         # initialize generators
-        training_generator = ImageDataGenerator(horizontal_flip=True, 
-                                                vertical_flip=True, 
-                                                preprocessing_function=nio_preprocessing_function).flow_from_dataframe(
-                                                        dataframe = train_df,
-                                                        target_size = (IMG_ROWS, IMG_COLS),
-                                                        batch_size=32, 
-                                                        shuffle=True)
-        
-        validation_generator = ImageDataGenerator(horizontal_flip=False, 
-                                                vertical_flip=False, 
-                                                preprocessing_function=nio_preprocessing_function).flow_from_dataframe(
-                                                        dataframe = val_df,
-                                                        target_size = (IMG_ROWS, IMG_COLS),
-                                                        batch_size=1,
-                                                        shuffle=False)   
+        training_generator = ImageDataGenerator(horizontal_flip=True,
+                vertical_flip=True,
+                preprocessing_function=nio_preprocessing_function).flow_from_dataframe(
+                        dataframe = train_df,
+                        target_size = (IMG_ROWS, IMG_COLS),
+                        batch_size=32,
+                        shuffle=True)
 
-        # import and build model
+                validation_generator = ImageDataGenerator(horizontal_flip=False, 
+                        vertical_flip=False,
+                        preprocessing_function=nio_preprocessing_function).flow_from_dataframe(
+                                dataframe = val_df,
+                                target_size = (IMG_ROWS, IMG_COLS),
+                                batch_size=1,
+                                shuffle=False)
+
+                        # import and build model
         parent_model = load_model(model_path)
         model = model_builder(parent_model)
 
@@ -215,9 +222,10 @@ def kfold_iterator(parent_df, patient_list, model_path):
         parallel_model.compile(optimizer=adam, loss="categorical_crossentropy", metrics =['accuracy'])
 
         # fit model
-        history = parallel_model.fit_generator(training_generator, steps_per_epoch = STEPS_PER_EPOCH, epochs=NUM_EPOCHS, shuffle=True, class_weight = class_weights(training_generator),
-                                    max_queue_size=30, workers=1, initial_epoch=0, verbose = 1)
-        
+        history = parallel_model.fit_generator(training_generator, steps_per_epoch = STEPS_PER_EPOCH, 
+                epochs=NUM_EPOCHS, shuffle=True, class_weight = class_weights(training_generator),
+                max_queue_size=30, workers=1, initial_epoch=0, verbose = 1)
+
         # validation_data=validation_generator, validation_steps=val_df.shape[0]
         cnn_predictions = parallel_model.predict_generator(validation_generator, steps=val_df.shape[0], verbose=1) 
 
@@ -232,10 +240,10 @@ def kfold_iterator(parent_df, patient_list, model_path):
         kfold_train_object.val_accuracy(validation_generator)
 
         print(str(kth_fold), "fold validation accuracy:", str(kfold_train_object.val_acc))
-        
+
         # add to dictionary
         training_dict["train_epoch_" + str(kth_fold)] = kfold_train_object
-        
+
         # export results to xlsx file
         export_history(kfold_train_object, kth_fold)
 
@@ -248,13 +256,13 @@ def kfold_iterator(parent_df, patient_list, model_path):
         del model
 
 if __name__ == "__main__":
-    
+
     # training specifications
     IMG_ROWS, IMG_COLS = 300, 300
     IMG_CHANNELS = 3
 
     TOTAL_CLASSES = 3
-    
+
     STEPS_PER_EPOCH = 5000
     NUM_EPOCHS = 3
 
@@ -263,5 +271,3 @@ if __name__ == "__main__":
 
     # iterator over the kfolds
     training_dictionary = kfold_iterator(parent_df, patients, model_path="/home/todd/Desktop/Models/model_for_activations_Final_Resnet_weights.03-0.86.hdf5")
-
-

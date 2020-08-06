@@ -83,16 +83,16 @@ class Patch(object):
 	def get_softmax(self):
 		return(self.softmax)
 
-def indices_map(array, step_size = 100): 
+def indices_map(array, step_size = 100):
 	"""
 	This is an index map the same size as the input image that used to identify which heatmap pixels overlap with each patch
 	"""
 	# define the number of values needed in your matrix if indices
 	array_values = np.arange(array.shape[0]/step_size * array.shape[1]/step_size).astype(int)
-	
+
 	# initialize an empty matrix
 	init_array = np.empty(shape=(array.shape[0], array.shape[1]))
-	
+
 	# generate starting points for for-loop
 	starts = np.arange(array.shape[0], step_size) # this assumes a square matrix 
 	counter = 0 # counter for indexing into array_values
@@ -101,8 +101,8 @@ def indices_map(array, step_size = 100):
 			fill_array = np.zeros((step_size, step_size))
 			fill_array.fill(array_values[counter]) # fill with index value
 			init_array[y:y + step_size, x:x + step_size] = fill_array
-			counter += 1 
-	
+			counter += 1
+
 	return init_array
 
 def patch_dictionary(image, model, indices_map, step_size):
@@ -138,8 +138,8 @@ def patch_dictionary(image, model, indices_map, step_size):
 
 
 def srh_heatmap(patch_dict, image_size, step_size):
-	
-	heatmap_pixels = int(np.square(image_size/step_size))
+
+        heatmap_pixels = int(np.square(image_size/step_size))
 	heatmap_dict = {}
 
 	for pixel in range(heatmap_pixels):
@@ -154,14 +154,12 @@ def srh_heatmap(patch_dict, image_size, step_size):
 	flattened_image = np.zeros((heatmap_pixels, TOTAL_CLASSES))
 	for pixel, unormed_dist in heatmap_dict.items():
 		flattened_image[pixel, :] = unormed_dist/unormed_dist.sum()
-		
+
 	height_width = int(np.sqrt(heatmap_pixels))
 	heatmap = flattened_image.reshape((height_width, height_width, TOTAL_CLASSES))
 	return heatmap
-		
 
 if __name__ == '__main__':
-
 
 	tiles_mosaic = indices_map(test_array)
 	patch_dict = patch_dictionary(test_array, tiles_mosaic)

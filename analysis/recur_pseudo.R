@@ -1,12 +1,11 @@
 
-# Script for data wrangling and analysis of cross validation
+# R Script for data wrangling and analysis of cross validation
 
 # importing
 library(readr)
 library(readxl)
 # plotting
 library(ggplot2) # https://www.ggplot2-exts.org/ ggplot extensions
-library(esquisse)
 # wrangling
 library(tidyr)
 library(dplyr)
@@ -16,10 +15,7 @@ library(stringr)
 # programming
 library(infer)
 library(purrr)
-library(testthat)
 
-library(caret)
-library(forcats)
 library(plotROC)
 library(ramify)
 library(pROC)
@@ -322,6 +318,3 @@ cm_kfold_iterator_patches <- function(df){
   }
 } # will return the accuracy values as written 
 cm_kfold_iterator_patches(full_df)
-
-
-

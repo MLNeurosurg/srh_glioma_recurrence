@@ -1,5 +1,5 @@
 # RecurSRH
-Code repository for paper titled "Rapid, label-free detection of diffuse glioma recurrence using intraoperative stimulated Raman histology and deep neural networks"
+Code repository for paper titled "Rapid, label-free detection of diffuse glioma recurrence using intraoperative stimulated Raman histology and deep neural networks" published in Neuro-Oncology, July 2020
 
 # Background
 Detection of glioma recurrence remains a challenge in modern neuro-oncology. Noninvasive radiographic imaging is unable to definitively differentiate true recurrence versus pseudoprogression. Even in biopsied tissue, it can be challenging to differentiate recurrent tumor and treatment effect. We hypothesized that intraoperative stimulated Raman histology (SRH) and deep neural networks can be used to improve the intraoperative detection of glioma recurrence. 

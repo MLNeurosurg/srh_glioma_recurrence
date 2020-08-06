@@ -1,5 +1,6 @@
 
-# plotting for recurrence paper
+# R code for plotting results of prediction
+
 # Project plotting---------------------
 # check the incorrect cases
 patch_df <- full_df[full_df$ground != 0,]
@@ -47,7 +48,6 @@ ggplot(patient_preds, aes(d = patient_df.label, m = recurrence_probs, col = kfol
   geom_roc(cutoffs.at = c(0.5)) +
   style_roc() +
   scale_fill_kfold()
-
 
 # patient plots prediction
 patient_recur <- patient_preds[patient_preds$patient_df.label == "recurrence",]
