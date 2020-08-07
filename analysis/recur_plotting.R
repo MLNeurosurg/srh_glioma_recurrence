@@ -1,10 +1,12 @@
 
 # R code for plotting results of prediction
+# Repository of code only, not a stand alone script
 
 # Project plotting---------------------
 # check the incorrect cases
 patch_df <- full_df[full_df$ground != 0,]
 patch_df$ground = as.factor(patch_df$ground)
+
 
 kfold_auc <- function(df, labels_name, predictions_name){
   rocs <- c()
@@ -12,7 +14,7 @@ kfold_auc <- function(df, labels_name, predictions_name){
   for (kfold_num in kfolds){
     print(kfold_num)
     df_kfold <- filter(df, kfold == kfold_num) 
-    kfold_roc = roc(df_kfold[[labels_name]],df_kfold[[predictions_name]])
+    kfold_roc <- roc(df_kfold[[labels_name]],df_kfold[[predictions_name]])
     rocs <- c(rocs, auc(kfold_roc))
   }
   names(rocs) <- kfolds

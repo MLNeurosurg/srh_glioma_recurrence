@@ -1,5 +1,6 @@
 
 # R Script for data wrangling and analysis of cross validation
+# Repository of code only, not a stand alone script
 
 # importing
 library(readr)
@@ -15,7 +16,7 @@ library(stringr)
 # programming
 library(infer)
 library(purrr)
-
+# analysis
 library(plotROC)
 library(ramify)
 library(pROC)
@@ -24,7 +25,7 @@ library(pROC)
 mosaic_labels <- read_csv("~/mosaic_list.csv")
 patient_labels <- read_csv("~/patient_list.csv")
 
-# factorize labels
+#factorize labels
 factorize <- function(df){
   if (nrow(df) > 1000){
     df$ground <- as.factor(df$ground)
@@ -81,6 +82,8 @@ import_iteration <- function(filepath){
   df["mosaic"] <- map_chr(df$filenames, mosaic_label)
   return(df)
 }
+
+# import csv files for each kfold iteration
 kfold1_df <- import_iteration(filepath = "/Users/toddhollon/Desktop/Recur_pseudo/cv_round1")
 kfold2_df <- import_iteration(filepath = "/Users/toddhollon/Desktop/Recur_pseudo/cv_round2")
 kfold3_df <- import_iteration(filepath = "/Users/toddhollon/Desktop/Recur_pseudo/cv_round3")
@@ -101,6 +104,7 @@ normalized_softmax_df <- function(df, level = 'mosaic'){
     summarise(nondiagnostic = sum(nondiagnostic),
               pseudoprogression = sum(pseudoprogression),
               recurrence = sum(recurrence))
+  
   # renormalize the values of the pseudoprogressio and recurrence only 
   renormalize_softmax <- function(df){
     for (i in 1:nrow(df)){
@@ -109,6 +113,7 @@ normalized_softmax_df <- function(df, level = 'mosaic'){
     return(df)
   }
   
+  # call function above
   renorm_df <- renormalize_softmax(unnormed_df)
   renorm_df["kfold"] <- unique(df$kfold) # add column with the kfold label
   return(renorm_df)

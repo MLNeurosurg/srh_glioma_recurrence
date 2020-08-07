@@ -3,7 +3,9 @@
 """
 Script to perform cross validation on the 35 patient training set. The major
 advantage of this script that it will perform patient-level cross validation,
-not patch or mosaic level cross validaiton.
+not patch- or mosaic-level cross validation
+
+
 """
 
 from pandas import DataFrame, ExcelWriter
@@ -57,15 +59,13 @@ class Kfold_split_data(object):
         self.val_acc = accuracy_score(index_validation, self.val_predictions)
 
 def file_splitter(file):
-    """
-    Function to return the NIO patient number
+    """Function to return the NIO patient number
     """
     nio, _ = file.split("-")
     return nio
 
 def nio_preprocessing_function(image):
-    """
-    Channel-wise means calculated over NIO dataset
+    """Channel-wise means calculated over NIO dataset
     """
     image[:,:,0] -= 102.1
     image[:,:,1] -= 91.0
@@ -73,8 +73,7 @@ def nio_preprocessing_function(image):
     return image
 
 def parent_dataframe(directory):
-    """
-    Returns a dataframe with full list of files for training and validation to be cross-folded and patient list
+    """Returns a dataframe with full list of files for training and validation to be cross-folded and patient list
     """
     filelist = []
     patients = []
@@ -103,8 +102,7 @@ def parent_dataframe(directory):
     return patients, df
 
 def model_builder(parent_model, trainable_feature_extractor = True):
-    """
-    Function that builds the recurrence model from a previously trained SRH feature extractor
+    """Function that builds the recurrence model from a previously trained SRH feature extractor
     for transfer learning.
     Can specify if the bottom CNN layers are trainable.
     if True > "pretraining"
@@ -129,9 +127,8 @@ def model_builder(parent_model, trainable_feature_extractor = True):
     return model
 
 def kfold_generator(df, patient_list, kth_fold, step = 5):
-    """
-    Generates folds for cross validation
-    Step 5 is specific to training set of 35 and needs specific for your dataset.
+    """Generates folds for cross validation
+    Step value of 5 is specific to training set of 35 and needs specified for your dataset.
     """
     val_set = patient_list[kth_fold * step:kth_fold * step + step]
     train_set = list(set(patient_list).difference(val_set))
@@ -153,7 +150,7 @@ def kfold_generator(df, patient_list, kth_fold, step = 5):
 def class_weights(train_generator):
     weights = class_weight.compute_class_weight('balanced', np.unique(train_generator.classes), train_generator.classes)
     weight_dict = dict(zip(list(range(0,TOTAL_CLASSES)), weights))
-    return weight_dict
+    retur weight_dict
 
 def export_history(kfold_object, kthfold):
     """Function that will export cross validation results.
